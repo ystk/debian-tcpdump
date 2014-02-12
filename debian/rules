@@ -1,14 +1,11 @@
 #!/usr/bin/make -f
 
-include /usr/share/hardening-includes/hardening.make
-
-export CFLAGS += -D_FILE_OFFSET_BITS=64 $(HARDENING_CFLAGS)
-export LDFLAGS += $(HARDENING_LDFLAGS)
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+export DEB_CFLAGS_MAINT_APPEND = -D_FILE_OFFSET_BITS=64
 
 %:
-	dh $@
+	dh $@ --parallel
 
 override_dh_auto_configure:
-	./configure --prefix=/usr --enable-ipv6
-
-override_dh_auto_test:
+	autoconf --force
+	./configure --prefix=/usr --enable-ipv6 --with-crypto

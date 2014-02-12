@@ -1,3 +1,64 @@
+tcpdump (4.3.0-1) unstable; urgency=low
+
+  * New upstream release.
+  * Re-enable test suite.
+
+ -- Romain Francoise <rfrancoise@debian.org>  Wed, 13 Jun 2012 22:55:54 +0200
+
+tcpdump (4.2.1-3) unstable; urgency=low
+
+  * Fix CPPFLAGS handling in upstream configure.in to avoid losing
+    hardening flags, patch by Simon Ruderich <simon@ruderich.org>
+    (closes: #662016).
+  * Fix some misspellings pointed out by lintian.
+  * debian/control: Set Standards-Version to 3.9.3.
+
+ -- Romain Francoise <rfrancoise@debian.org>  Sat, 03 Mar 2012 17:11:48 +0100
+
+tcpdump (4.2.1-2) unstable; urgency=low
+
+  * Drop debian/patches/50_kfreebsd.diff (closes: #658848).
+
+ -- Romain Francoise <rfrancoise@debian.org>  Mon, 06 Feb 2012 19:01:12 +0100
+
+tcpdump (4.2.1-1) unstable; urgency=low
+
+  * New upstream release.
+  * Upload to unstable.
+
+ -- Romain Francoise <rfrancoise@debian.org>  Mon, 02 Jan 2012 20:19:22 +0100
+
+tcpdump (4.2.0~rc1-2) experimental; urgency=low
+
+  * Make sure OpenSSL support gets enabled: since it moved to multiarch
+    paths, the configure script doesn't find libcrypto.so and disables
+    crypto support. To fix this, simplify detection logic in configure.in
+    and run autoconf before configuring.
+  * Redo build flags handling:
+    + Enable hardening flags via dpkg-buildflags, not hardening-includes.
+    + Switch to debhelper compat level 9 to have build flags exported
+      automatically.
+    + Adjust build-depends accordingly.
+  * Enable parallel build in debhelper.
+
+ -- Romain Francoise <rfrancoise@debian.org>  Sun, 06 Nov 2011 19:14:23 +0100
+
+tcpdump (4.2.0~rc1-1) experimental; urgency=low
+
+  * New upstream beta release (closes: #636806); now switches to the -Z
+    user before opening the first output file (closes: #434603).
+  * debian/control: Set Standards-Version to 3.9.2.
+
+ -- Romain Francoise <rfrancoise@debian.org>  Sun, 14 Aug 2011 10:44:58 +0200
+
+tcpdump (4.1.1-2) unstable; urgency=low
+
+  * Fix FTBFS on GNU/Hurd; patch from Svante Signell (closes: #622287).
+  * debian/control: Tweak short and long descriptions, set
+    Standards-Version to 3.9.1.
+
+ -- Romain Francoise <rfrancoise@debian.org>  Mon, 11 Apr 2011 22:37:29 +0200
+
 tcpdump (4.1.1-1) unstable; urgency=low
 
   * New upstream release (closes: #576001).

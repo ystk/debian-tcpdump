@@ -5,7 +5,7 @@ Don't install a versioned binary.
 
 --- a/Makefile.in
 +++ b/Makefile.in
-@@ -327,7 +327,6 @@
+@@ -406,7 +406,6 @@
  	[ -d $(DESTDIR)$(sbindir) ] || \
  	    (mkdir -p $(DESTDIR)$(sbindir); chmod 755 $(DESTDIR)$(sbindir))
  	$(INSTALL_PROGRAM) $(PROG) $(DESTDIR)$(sbindir)/$(PROG)
