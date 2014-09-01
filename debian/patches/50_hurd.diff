@@ -5,9 +5,9 @@ Support build on GNU/Hurd; from Svante Signell.
 
 --- a/tcpdump-stdinc.h
 +++ b/tcpdump-stdinc.h
-@@ -117,7 +117,11 @@
- #ifdef HAVE_SYS_BITYPES_H
- #include <sys/bitypes.h>
+@@ -186,7 +186,11 @@
+ #elif HAVE_STDINT_H
+ #include <stdint.h>
  #endif
 +#ifndef __GNU__
  #include <sys/param.h>

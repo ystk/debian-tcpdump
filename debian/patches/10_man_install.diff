@@ -5,7 +5,7 @@ Change man page install paths for Debian.
 
 --- a/Makefile.in
 +++ b/Makefile.in
-@@ -407,13 +407,13 @@
+@@ -405,13 +405,13 @@
  	    (mkdir -p $(DESTDIR)$(sbindir); chmod 755 $(DESTDIR)$(sbindir))
  	$(INSTALL_PROGRAM) $(PROG) $(DESTDIR)$(sbindir)/$(PROG)
  	$(INSTALL_PROGRAM) $(PROG) $(DESTDIR)$(sbindir)/$(PROG).`cat ${srcdir}/VERSION`

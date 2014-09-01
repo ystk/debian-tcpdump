@@ -1,3 +1,51 @@
+tcpdump (4.6.1-3) unstable; urgency=medium
+
+  * Bump build-dep on libpcap0.8-dev to >= 1.5 as the pppoes_id test case
+    requires a pcap version that supports PPPoE session ID filtering.
+
+ -- Romain Francoise <rfrancoise@debian.org>  Sat, 16 Aug 2014 17:38:28 +0200
+
+tcpdump (4.6.1-2) unstable; urgency=medium
+
+  * Expand configure check for net/pfvar.h to also check for existence of
+    net/if_pflog.h to fix build on GNU/kFreeBSD, which ships the former
+    but not the latter, see #756553 (closes: #756790).
+
+ -- Romain Francoise <rfrancoise@debian.org>  Mon, 04 Aug 2014 22:37:24 +0200
+
+tcpdump (4.6.1-1) unstable; urgency=medium
+
+  * New upstream release.
+  * debian/control: Mark tcpdump 'Multi-Arch: foreign' (closes: #700727).
+
+ -- Romain Francoise <rfrancoise@debian.org>  Wed, 30 Jul 2014 19:16:49 +0200
+
+tcpdump (4.5.1-2) unstable; urgency=low
+
+  * Disable nflog-e testcase, the NFLOG header length is specified in host
+    byte order which makes capture files order-dependent (closes: #731031).
+
+ -- Romain Francoise <rfrancoise@debian.org>  Sun, 01 Dec 2013 12:13:16 +0100
+
+tcpdump (4.5.1-1) unstable; urgency=low
+
+  * New upstream release.
+  * Disable new pppoes testcase which uses a new pcap feature to avoid tying
+    the two upstream versions together.
+  * debian/control: Set Standards-Version to 3.9.5.
+
+ -- Romain Francoise <rfrancoise@debian.org>  Sat, 30 Nov 2013 23:54:03 +0100
+
+tcpdump (4.4.0-1) unstable; urgency=low
+
+  * New upstream release:
+    + Fixes format error in NTP printer (closes: #686276).
+    + Rewords -e description (closes: #648768).
+  * debian/control: Set Standards-Version to 3.9.4.
+  * Use canonical locations in Vcs-* fields.
+
+ -- Romain Francoise <rfrancoise@debian.org>  Sat, 25 May 2013 13:50:30 +0200
+
 tcpdump (4.3.0-1) unstable; urgency=low
 
   * New upstream release.
