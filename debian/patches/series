@@ -4,3 +4,6 @@
 30_uflag_flushopen.diff
 50_kfreebsd.diff
 50_autotools-dev.diff
+60_cve-2014-8767.diff
+60_cve-2014-8769.diff
+60_cve-2014-9140.diff

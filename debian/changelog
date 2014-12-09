@@ -1,3 +1,16 @@
+tcpdump (4.1.1-1+deb6u1) squeeze-lts; urgency=low
+
+  * Non-maintainer upload by the Squeeze LTS Team.
+  * Add patches extracted from the upstream tcpdump_4.3 branch fixing
+    three security issues:
+    + CVE-2014-8767: missing bounds checks in the OLSR dissector
+      (closes: #770434).
+    + CVE-2014-8769: missing bounds checks in the AODV dissector
+      (closes: #770424).
+    + CVE-2014-9140: missing bounds checks in the PPP dissector
+
+ -- Thorsten Alteholz <debian@alteholz.de>  Mon, 08 Dec 2014 18:17:14 +0100
+
 tcpdump (4.1.1-1) unstable; urgency=low
 
   * New upstream release (closes: #576001).
