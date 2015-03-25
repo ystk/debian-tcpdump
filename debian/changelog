@@ -1,3 +1,13 @@
+tcpdump (4.1.1-1+deb6u2) squeeze-lts; urgency=low
+
+  * Cherry-pick changes from upstream Git to fix the following security
+    issues:
+    + CVE-2015-0261: missing bounds checks in IPv6 Mobility printer.
+    + CVE-2015-2154: missing bounds checks in ISOCLNS printer.
+    + CVE-2015-2155: missing bounds checks in ForCES printer.
+
+ -- Romain Francoise <rfrancoise@debian.org>  Mon, 16 Mar 2015 21:19:54 +0100
+
 tcpdump (4.1.1-1+deb6u1) squeeze-lts; urgency=low
 
   * Non-maintainer upload by the Squeeze LTS Team.
