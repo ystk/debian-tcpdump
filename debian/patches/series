@@ -4,3 +4,12 @@
 50_hurd.diff
 50_kfreebsd.diff
 50_autotools-dev.diff
+60_cve-2014-8767.diff
+60_cve-2014-8768.diff
+60_cve-2014-8769.diff
+60_cve-2014-9140.diff
+60_cve-2015-0261.diff
+60_cve-2015-2153.diff
+60_cve-2015-2153-2.diff
+60_cve-2015-2154.diff
+60_cve-2015-2155.diff

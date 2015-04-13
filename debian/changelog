@@ -1,3 +1,47 @@
+tcpdump (4.6.2-5) unstable; urgency=high
+
+  * Cherry-pick commit fb6e5377f3 from upstream Git to fix regressions in the
+    RPKI/RTR printer after the CVE-2015-2153 changes. Thanks to Artur Rona
+    from Ubuntu for the heads-up (closes: #781362).
+
+ -- Romain Francoise <rfrancoise@debian.org>  Sat, 04 Apr 2015 19:10:27 +0200
+
+tcpdump (4.6.2-4) unstable; urgency=high
+
+  * Cherry-pick changes from upstream Git to fix the following security
+    issues:
+    + CVE-2015-0261: missing bounds checks in IPv6 Mobility printer.
+    + CVE-2015-2153: missing bounds checks in RPKI/RTR printer.
+    + CVE-2015-2154: missing bounds checks in ISOCLNS printer.
+    + CVE-2015-2155: missing bounds checks in ForCES printer.
+
+ -- Romain Francoise <rfrancoise@debian.org>  Sat, 14 Mar 2015 18:43:44 +0100
+
+tcpdump (4.6.2-3) unstable; urgency=high
+
+  * Cherry-pick commit 0f95d441e4 from upstream Git to fix a buffer overflow
+    in the PPP dissector (CVE-2014-9140).
+
+ -- Romain Francoise <rfrancoise@debian.org>  Sat, 29 Nov 2014 12:23:53 +0100
+
+tcpdump (4.6.2-2) unstable; urgency=high
+
+  * Urgency high due to security fixes.
+  * Add three patches extracted from various upstream commits fixing
+    vulnerabilities in three dissectors:
+    + CVE-2014-8767: missing bounds checks in OLSR dissector (closes: #770434).
+    + CVE-2014-8768: missing bounds checks in Geonet dissector
+      (closes: #770415).
+    + CVE-2014-8769: missing bounds checks in AOVD dissector (closes: #770424).
+
+ -- Romain Francoise <rfrancoise@debian.org>  Sat, 22 Nov 2014 11:48:08 +0100
+
+tcpdump (4.6.2-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Romain Francoise <rfrancoise@debian.org>  Thu, 04 Sep 2014 18:53:34 +0200
+
 tcpdump (4.6.1-3) unstable; urgency=medium
 
   * Bump build-dep on libpcap0.8-dev to >= 1.5 as the pppoes_id test case
