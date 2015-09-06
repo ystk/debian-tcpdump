@@ -3,6 +3,7 @@
 20_man_fixes.diff
 50_hurd.diff
 50_kfreebsd.diff
+50_droproot_stderr.diff
 50_autotools-dev.diff
 60_cve-2014-8767.diff
 60_cve-2014-8768.diff

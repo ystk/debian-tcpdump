@@ -1,3 +1,11 @@
+tcpdump (4.6.2-5+deb8u1) stable; urgency=low
+
+  * Cherry-pick commit 3f15ae25c2 from upstream Git to fix -Z confirmation
+    log being sent to stdout, where it can get mixed with pcap stream
+    data if '-w -' is used (closes: #793479).
+
+ -- Romain Francoise <rfrancoise@debian.org>  Sun, 02 Aug 2015 19:57:22 +0200
+
 tcpdump (4.6.2-5) unstable; urgency=high
 
   * Cherry-pick commit fb6e5377f3 from upstream Git to fix regressions in the

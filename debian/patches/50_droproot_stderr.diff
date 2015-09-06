@@ -1,0 +1,28 @@
+commit 3f15ae25c25046b9ebdf8ab0283f2e6382a4df0e
+Author: Denis Ovsienko <denis@ovsienko.info>
+Date:   Mon Feb 9 01:21:51 2015 +0000
+
+    droproot(): always print to stderr (GH #425)
+    
+    Otherwise it interferes with the output of "tcpdump -w -".
+
+--- a/tcpdump.c
++++ b/tcpdump.c
+@@ -727,7 +727,7 @@
+ 			fprintf(stderr, "error : ret %d\n", ret);
+ 		}
+ 		else {
+-			printf("dropped privs to %s\n", username);
++			fprintf(stderr, "dropped privs to %s\n", username);
+ 		}
+ 		/* We don't need CAP_SETUID and CAP_SETGID */
+ 		capng_update(CAPNG_DROP, CAPNG_EFFECTIVE, CAP_SETUID);
+@@ -747,7 +747,7 @@
+ 			exit(1);
+ 		}
+ 		else {
+-			printf("dropped privs to %s\n", username);
++			fprintf(stderr, "dropped privs to %s\n", username);
+ 		}
+ #endif /* HAVE_CAP_NG_H */
+ 	}
