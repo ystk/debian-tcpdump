@@ -30,38 +30,60 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define NETDISSECT_REWORKED
+/* \summary: version-independent OpenFlow printer */
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
-#include <tcpdump-stdinc.h>
+#include <netdissect-stdinc.h>
 
-#include "interface.h"
+#include "netdissect.h"
 #include "extract.h"
 #include "openflow.h"
+#include "oui.h"
 
 static const char tstr[] = " [|openflow]";
-static const char cstr[] = " (corrupt)";
 
 #define OF_VER_1_0    0x01
 
+const struct tok onf_exp_str[] = {
+	{ ONF_EXP_ONF,               "ONF Extensions"                                  },
+	{ ONF_EXP_BUTE,              "Budapest University of Technology and Economics" },
+	{ ONF_EXP_NOVIFLOW,          "NoviFlow"                                        },
+	{ ONF_EXP_L3,                "L3+ Extensions, Vendor Neutral"                  },
+	{ ONF_EXP_L4L7,              "L4-L7 Extensions"                                },
+	{ ONF_EXP_WMOB,              "Wireless and Mobility Extensions"                },
+	{ ONF_EXP_FABS,              "Forwarding Abstractions Extensions"              },
+	{ ONF_EXP_OTRANS,            "Optical Transport Extensions"                    },
+	{ 0, NULL }
+};
+
+const char *
+of_vendor_name(const uint32_t vendor)
+{
+	const struct tok *table = (vendor & 0xff000000) == 0 ? oui_values : onf_exp_str;
+	return tok2str(table, "unknown", vendor);
+}
+
 static void
 of_header_print(netdissect_options *ndo, const uint8_t version, const uint8_t type,
-                      const uint16_t length, const uint32_t xid) {
+                      const uint16_t length, const uint32_t xid)
+{
 	ND_PRINT((ndo, "\n\tversion unknown (0x%02x), type 0x%02x, length %u, xid 0x%08x",
 	       version, type, length, xid));
 }
 
 /* Print a single OpenFlow message. */
 static const u_char *
-of_header_body_print(netdissect_options *ndo, const u_char *cp, const u_char *ep) {
+of_header_body_print(netdissect_options *ndo, const u_char *cp, const u_char *ep)
+{
 	uint8_t version, type;
 	uint16_t length;
 	uint32_t xid;
 
 	if (ep < cp + OF_HEADER_LEN)
-		goto corrupt;
+		goto invalid;
 	/* version */
 	ND_TCHECK2(*cp, 1);
 	version = *cp;
@@ -85,7 +107,7 @@ of_header_body_print(netdissect_options *ndo, const u_char *cp, const u_char *ep
 	 * segment. */
 	if (length < OF_HEADER_LEN) {
 		of_header_print(ndo, version, type, length, xid);
-		goto corrupt;
+		goto invalid;
 	}
 	/* Decode known protocol versions further without printing the header (the
 	 * type decoding is version-specific. */
@@ -98,8 +120,8 @@ of_header_body_print(netdissect_options *ndo, const u_char *cp, const u_char *ep
 		return cp + length - OF_HEADER_LEN; /* done with current message */
 	}
 
-corrupt: /* fail current packet */
-	ND_PRINT((ndo, "%s", cstr));
+invalid: /* fail current packet */
+	ND_PRINT((ndo, "%s", istr));
 	ND_TCHECK2(*cp, ep - cp);
 	return ep;
 trunc:
@@ -110,7 +132,8 @@ trunc:
 /* Print a TCP segment worth of OpenFlow messages presuming the segment begins
  * on a message boundary. */
 void
-openflow_print(netdissect_options *ndo, const u_char *cp, const u_int len) {
+openflow_print(netdissect_options *ndo, const u_char *cp, const u_int len)
+{
 	const u_char *ep = cp + len;
 
 	ND_PRINT((ndo, ": OpenFlow"));

@@ -12,19 +12,20 @@
  * LIMITATION, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
  * FOR A PARTICULAR PURPOSE.
  *
- * Support for the Light Weight Access Point Protocol as per draft-ohara-capwap-lwapp-04
- *
  * Original code by Carles Kishimoto <carles.kishimoto@gmail.com>
  */
 
-#define NETDISSECT_REWORKED
+/* \summary: Light Weight Access Point Protocol (LWAPP) printer */
+
+/* specification: RFC 5412 */
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
-#include <tcpdump-stdinc.h>
+#include <netdissect-stdinc.h>
 
-#include "interface.h"
+#include "netdissect.h"
 #include "extract.h"
 #include "addrtoname.h"
 
@@ -162,8 +163,8 @@ struct lwapp_message_header {
 
 void
 lwapp_control_print(netdissect_options *ndo,
-                    const u_char *pptr, u_int len, int has_ap_ident) {
-
+                    const u_char *pptr, u_int len, int has_ap_ident)
+{
     const struct lwapp_transport_header *lwapp_trans_header;
     const struct lwapp_control_header *lwapp_control_header;
     const u_char *tptr;
@@ -285,8 +286,8 @@ lwapp_control_print(netdissect_options *ndo,
 
 void
 lwapp_data_print(netdissect_options *ndo,
-                 const u_char *pptr, u_int len) {
-
+                 const u_char *pptr, u_int len)
+{
     const struct lwapp_transport_header *lwapp_trans_header;
     const u_char *tptr;
     int tlen;

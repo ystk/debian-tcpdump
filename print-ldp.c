@@ -14,14 +14,15 @@
  *  and Steinar Haug (sthaug@nethelp.no)
  */
 
-#define NETDISSECT_REWORKED
+/* \summary: Label Distribution Protocol (LDP) printer */
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
-#include <tcpdump-stdinc.h>
+#include <netdissect-stdinc.h>
 
-#include "interface.h"
+#include "netdissect.h"
 #include "extract.h"
 #include "addrtoname.h"
 
@@ -209,7 +210,7 @@ static const struct tok ldp_fec_martini_ifparm_vccv_cv_values[] = {
     { 0, NULL}
 };
 
-static int ldp_msg_print(netdissect_options *, register const u_char *);
+static int ldp_pdu_print(netdissect_options *, register const u_char *);
 
 /*
  * ldp tlv header
@@ -233,8 +234,9 @@ static int ldp_msg_print(netdissect_options *, register const u_char *);
 
 static int
 ldp_tlv_print(netdissect_options *ndo,
-              register const u_char *tptr) {
-
+              register const u_char *tptr,
+              u_short msg_tlen)
+{
     struct ldp_tlv_header {
         uint8_t type[2];
         uint8_t length[2];
@@ -248,7 +250,12 @@ ldp_tlv_print(netdissect_options *ndo,
     int i;
 
     ldp_tlv_header = (const struct ldp_tlv_header *)tptr;
+    ND_TCHECK(*ldp_tlv_header);
     tlv_len=EXTRACT_16BITS(ldp_tlv_header->length);
+    if (tlv_len + 4 > msg_tlen) {
+        ND_PRINT((ndo, "\n\t\t TLV contents go past end of message"));
+        return 0;
+    }
     tlv_tlen=tlv_len;
     tlv_type=LDP_MASK_TLV_TYPE(EXTRACT_16BITS(ldp_tlv_header->type));
 
@@ -278,12 +285,10 @@ ldp_tlv_print(netdissect_options *ndo,
         TLV_TCHECK(4);
         ND_PRINT((ndo, "\n\t      IPv4 Transport Address: %s", ipaddr_string(ndo, tptr)));
         break;
-#ifdef INET6
     case LDP_TLV_IPV6_TRANSPORT_ADDR:
         TLV_TCHECK(16);
         ND_PRINT((ndo, "\n\t      IPv6 Transport Address: %s", ip6addr_string(ndo, tptr)));
         break;
-#endif
     case LDP_TLV_CONFIG_SEQ_NUMBER:
         TLV_TCHECK(4);
         ND_PRINT((ndo, "\n\t      Sequence Number: %u", EXTRACT_32BITS(tptr)));
@@ -305,7 +310,6 @@ ldp_tlv_print(netdissect_options *ndo,
 		tptr+=sizeof(struct in_addr);
 	    }
             break;
-#ifdef INET6
         case AFNUM_INET6:
 	    while(tlv_tlen >= sizeof(struct in6_addr)) {
 		ND_TCHECK2(*tptr, sizeof(struct in6_addr));
@@ -314,7 +318,6 @@ ldp_tlv_print(netdissect_options *ndo,
 		tptr+=sizeof(struct in6_addr);
 	    }
             break;
-#endif
         default:
             /* unknown AF */
             break;
@@ -359,7 +362,6 @@ ldp_tlv_print(netdissect_options *ndo,
 		else
 		    ND_PRINT((ndo, ": IPv4 prefix %s", buf));
 	    }
-#ifdef INET6
 	    else if (af == AFNUM_INET6) {
 		i=decode_prefix6(ndo, tptr, tlv_tlen, buf, sizeof(buf));
 		if (i == -2)
@@ -371,7 +373,6 @@ ldp_tlv_print(netdissect_options *ndo,
 		else
 		    ND_PRINT((ndo, ": IPv6 prefix %s", buf));
 	    }
-#endif
 	    else
 		ND_PRINT((ndo, ": Address family %u prefix", af));
 	    break;
@@ -379,16 +380,20 @@ ldp_tlv_print(netdissect_options *ndo,
 	    break;
 	case LDP_FEC_MARTINI_VC:
             /*
+             * We assume the type was supposed to be one of the MPLS
+             * Pseudowire Types.
+             */
+            TLV_TCHECK(7);
+            vc_info_len = *(tptr+2);
+
+            /*
 	     * According to RFC 4908, the VC info Length field can be zero,
 	     * in which case not only are there no interface parameters,
 	     * there's no VC ID.
 	     */
-            TLV_TCHECK(7);
-            vc_info_len = *(tptr+2);
-
             if (vc_info_len == 0) {
                 ND_PRINT((ndo, ": %s, %scontrol word, group-ID %u, VC-info-length: %u",
-                       tok2str(l2vpn_encaps_values, "Unknown", EXTRACT_16BITS(tptr)&0x7fff),
+                       tok2str(mpls_pw_types_values, "Unknown", EXTRACT_16BITS(tptr)&0x7fff),
                        EXTRACT_16BITS(tptr)&0x8000 ? "" : "no ",
                        EXTRACT_32BITS(tptr+3),
                        vc_info_len));
@@ -398,13 +403,16 @@ ldp_tlv_print(netdissect_options *ndo,
             /* Make sure we have the VC ID as well */
             TLV_TCHECK(11);
 	    ND_PRINT((ndo, ": %s, %scontrol word, group-ID %u, VC-ID %u, VC-info-length: %u",
-		   tok2str(l2vpn_encaps_values, "Unknown", EXTRACT_16BITS(tptr)&0x7fff),
+		   tok2str(mpls_pw_types_values, "Unknown", EXTRACT_16BITS(tptr)&0x7fff),
 		   EXTRACT_16BITS(tptr)&0x8000 ? "" : "no ",
                    EXTRACT_32BITS(tptr+3),
 		   EXTRACT_32BITS(tptr+7),
                    vc_info_len));
-            if (vc_info_len < 4)
-                goto trunc; /* minimum 4, for the VC ID */
+            if (vc_info_len < 4) {
+                /* minimum 4, for the VC ID */
+                ND_PRINT((ndo, " (invalid, < 4"));
+                return(tlv_len+4); /* Type & Length fields not included */
+	    }
             vc_info_len -= 4; /* subtract out the VC ID, giving the length of the interface parameters */
 
             /* Skip past the fixed information and the VC ID */
@@ -536,11 +544,11 @@ badtlv:
 
 void
 ldp_print(netdissect_options *ndo,
-          register const u_char *pptr, register u_int len) {
-
+          register const u_char *pptr, register u_int len)
+{
     int processed;
     while (len > (sizeof(struct ldp_common_header) + sizeof(struct ldp_msg_header))) {
-        processed = ldp_msg_print(ndo, pptr);
+        processed = ldp_pdu_print(ndo, pptr);
         if (processed == 0)
             return;
         len -= processed;
@@ -549,9 +557,9 @@ ldp_print(netdissect_options *ndo,
 }
 
 static int
-ldp_msg_print(netdissect_options *ndo,
-              register const u_char *pptr) {
-
+ldp_pdu_print(netdissect_options *ndo,
+              register const u_char *pptr)
+{
     const struct ldp_common_header *ldp_com_header;
     const struct ldp_msg_header *ldp_msg_header;
     const u_char *tptr,*msg_tptr;
@@ -559,7 +567,6 @@ ldp_msg_print(netdissect_options *ndo,
     u_short pdu_len,msg_len,msg_type,msg_tlen;
     int hexdump,processed;
 
-    tptr=pptr;
     ldp_com_header = (const struct ldp_common_header *)pptr;
     ND_TCHECK(*ldp_com_header);
 
@@ -573,8 +580,17 @@ ldp_msg_print(netdissect_options *ndo,
 	return 0;
     }
 
-    /* print the LSR-ID, label-space & length */
     pdu_len = EXTRACT_16BITS(&ldp_com_header->pdu_length);
+    if (pdu_len < sizeof(const struct ldp_common_header)-4) {
+        /* length too short */
+        ND_PRINT((ndo, "%sLDP, pdu-length: %u (too short, < %u)",
+               (ndo->ndo_vflag < 1) ? "" : "\n\t",
+               pdu_len,
+               (u_int)(sizeof(const struct ldp_common_header)-4)));
+        return 0;
+    }
+
+    /* print the LSR-ID, label-space & length */
     ND_PRINT((ndo, "%sLDP, Label-Space-ID: %s:%u, pdu-length: %u",
            (ndo->ndo_vflag < 1) ? "" : "\n\t",
            ipaddr_string(ndo, &ldp_com_header->lsr_id),
@@ -586,10 +602,8 @@ ldp_msg_print(netdissect_options *ndo,
         return 0;
 
     /* ok they seem to want to know everything - lets fully decode it */
-    tlen=pdu_len;
-
-    tptr += sizeof(const struct ldp_common_header);
-    tlen -= sizeof(const struct ldp_common_header)-4;	/* Type & Length fields not included */
+    tptr = pptr + sizeof(const struct ldp_common_header);
+    tlen = pdu_len - (sizeof(const struct ldp_common_header)-4);	/* Type & Length fields not included */
 
     while(tlen>0) {
         /* did we capture enough for fully decoding the msg header ? */
@@ -598,6 +612,19 @@ ldp_msg_print(netdissect_options *ndo,
         ldp_msg_header = (const struct ldp_msg_header *)tptr;
         msg_len=EXTRACT_16BITS(ldp_msg_header->length);
         msg_type=LDP_MASK_MSG_TYPE(EXTRACT_16BITS(ldp_msg_header->type));
+
+        if (msg_len < sizeof(struct ldp_msg_header)-4) {
+            /* length too short */
+            /* FIXME vendor private / experimental check */
+            ND_PRINT((ndo, "\n\t  %s Message (0x%04x), length: %u (too short, < %u)",
+                   tok2str(ldp_msg_values,
+                           "Unknown",
+                           msg_type),
+                   msg_type,
+                   msg_len,
+                   (u_int)(sizeof(struct ldp_msg_header)-4)));
+            return 0;
+        }
 
         /* FIXME vendor private / experimental check */
         ND_PRINT((ndo, "\n\t  %s Message (0x%04x), length: %u, Message ID: 0x%08x, Flags: [%s if unknown]",
@@ -609,11 +636,8 @@ ldp_msg_print(netdissect_options *ndo,
                EXTRACT_32BITS(&ldp_msg_header->id),
                LDP_MASK_U_BIT(EXTRACT_16BITS(&ldp_msg_header->type)) ? "continue processing" : "ignore"));
 
-        if (msg_len == 0) /* infinite loop protection */
-            return 0;
-
         msg_tptr=tptr+sizeof(struct ldp_msg_header);
-        msg_tlen=msg_len-sizeof(struct ldp_msg_header)+4; /* Type & Length fields not included */
+        msg_tlen=msg_len-(sizeof(struct ldp_msg_header)-4); /* Type & Length fields not included */
 
         /* did we capture enough for fully decoding the message ? */
         ND_TCHECK2(*tptr, msg_len);
@@ -630,7 +654,7 @@ ldp_msg_print(netdissect_options *ndo,
         case LDP_MSG_ADDRESS_WITHDRAW:
         case LDP_MSG_LABEL_WITHDRAW:
             while(msg_tlen >= 4) {
-                processed = ldp_tlv_print(ndo, msg_tptr);
+                processed = ldp_tlv_print(ndo, msg_tptr, msg_tlen);
                 if (processed == 0)
                     break;
                 msg_tlen-=processed;

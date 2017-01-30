@@ -7,24 +7,25 @@
  * BSD-style license that accompanies tcpdump or the GNU GPL version 2
  */
 
-#define NETDISSECT_REWORKED
+/* \summary: Datagram Congestion Control Protocol (DCCP) printer */
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
-#include <tcpdump-stdinc.h>
+#include <netdissect-stdinc.h>
 
 #include <stdio.h>
 #include <string.h>
 
-#include "interface.h"
+#include "netdissect.h"
 #include "addrtoname.h"
-#include "extract.h"			/* must come after interface.h */
+#include "extract.h"
 #include "ip.h"
-#ifdef INET6
 #include "ip6.h"
-#endif
 #include "ipproto.h"
+
+/* RFC4340: Datagram Congestion Control Protocol (DCCP) */
 
 /**
  * struct dccp_hdr - generic part of DCCP packet header, with a 24-bit
@@ -123,8 +124,21 @@ enum dccp_pkt_type {
 	DCCP_PKT_CLOSE,
 	DCCP_PKT_RESET,
 	DCCP_PKT_SYNC,
-	DCCP_PKT_SYNCACK,
-	DCCP_PKT_INVALID
+	DCCP_PKT_SYNCACK
+};
+
+static const struct tok dccp_pkt_type_str[] = {
+	{ DCCP_PKT_REQUEST, "DCCP-Request" },
+	{ DCCP_PKT_RESPONSE, "DCCP-Response" },
+	{ DCCP_PKT_DATA, "DCCP-Data" },
+	{ DCCP_PKT_ACK, "DCCP-Ack" },
+	{ DCCP_PKT_DATAACK, "DCCP-DataAck" },
+	{ DCCP_PKT_CLOSEREQ, "DCCP-CloseReq" },
+	{ DCCP_PKT_CLOSE, "DCCP-Close" },
+	{ DCCP_PKT_RESET, "DCCP-Reset" },
+	{ DCCP_PKT_SYNC, "DCCP-Sync" },
+	{ DCCP_PKT_SYNCACK, "DCCP-SyncAck" },
+	{ 0, NULL}
 };
 
 enum dccp_reset_codes {
@@ -186,17 +200,16 @@ static inline u_int dccp_csum_coverage(const struct dccp_hdr* dh, u_int len)
 static int dccp_cksum(netdissect_options *ndo, const struct ip *ip,
 	const struct dccp_hdr *dh, u_int len)
 {
-	return nextproto4_cksum(ndo, ip, (const uint8_t *)(void *)dh, len,
+	return nextproto4_cksum(ndo, ip, (const uint8_t *)(const void *)dh, len,
 				dccp_csum_coverage(dh, len), IPPROTO_DCCP);
 }
 
-#ifdef INET6
-static int dccp6_cksum(const struct ip6_hdr *ip6, const struct dccp_hdr *dh, u_int len)
+static int dccp6_cksum(netdissect_options *ndo, const struct ip6_hdr *ip6,
+	const struct dccp_hdr *dh, u_int len)
 {
-	return nextproto6_cksum(ip6, (const uint8_t *)(void *)dh, len,
+	return nextproto6_cksum(ndo, ip6, (const uint8_t *)(const void *)dh, len,
 				dccp_csum_coverage(dh, len), IPPROTO_DCCP);
 }
-#endif
 
 static const char *dccp_reset_code(uint8_t code)
 {
@@ -253,27 +266,24 @@ static int dccp_print_option(netdissect_options *, const u_char *, u_int);
  * @len - lenght of ip packet
  */
 void dccp_print(netdissect_options *ndo, const u_char *bp, const u_char *data2,
-                u_int len)
+		u_int len)
 {
 	const struct dccp_hdr *dh;
 	const struct ip *ip;
-#ifdef INET6
 	const struct ip6_hdr *ip6;
-#endif
 	const u_char *cp;
 	u_short sport, dport;
 	u_int hlen;
 	u_int fixed_hdrlen;
+	uint8_t	dccph_type;
 
 	dh = (const struct dccp_hdr *)bp;
 
-	ip = (struct ip *)data2;
-#ifdef INET6
+	ip = (const struct ip *)data2;
 	if (IP_V(ip) == 6)
 		ip6 = (const struct ip6_hdr *)data2;
 	else
 		ip6 = NULL;
-#endif /*INET6*/
 
 	/* make sure we have enough data to look at the X bit */
 	cp = (const u_char *)(dh + 1);
@@ -283,7 +293,7 @@ void dccp_print(netdissect_options *ndo, const u_char *bp, const u_char *data2,
 	}
 	if (len < sizeof(struct dccp_hdr)) {
 		ND_PRINT((ndo, "truncated-dccp - %u bytes missing!",
-			     len - (u_int)sizeof(struct dccp_hdr)));
+			  len - (u_int)sizeof(struct dccp_hdr)));
 		return;
 	}
 
@@ -291,7 +301,7 @@ void dccp_print(netdissect_options *ndo, const u_char *bp, const u_char *data2,
 	fixed_hdrlen = dccp_basic_hdr_len(dh);
 	if (len < fixed_hdrlen) {
 		ND_PRINT((ndo, "truncated-dccp - %u bytes missing!",
-			     len - fixed_hdrlen));
+			  len - fixed_hdrlen));
 		return;
 	}
 	ND_TCHECK2(*dh, fixed_hdrlen);
@@ -300,31 +310,30 @@ void dccp_print(netdissect_options *ndo, const u_char *bp, const u_char *data2,
 	dport = EXTRACT_16BITS(&dh->dccph_dport);
 	hlen = dh->dccph_doff * 4;
 
-#ifdef INET6
 	if (ip6) {
 		ND_PRINT((ndo, "%s.%d > %s.%d: ",
-			     ip6addr_string(ndo, &ip6->ip6_src), sport,
-			     ip6addr_string(ndo, &ip6->ip6_dst), dport));
-	} else
-#endif /*INET6*/
-	{
+			  ip6addr_string(ndo, &ip6->ip6_src), sport,
+			  ip6addr_string(ndo, &ip6->ip6_dst), dport));
+	} else {
 		ND_PRINT((ndo, "%s.%d > %s.%d: ",
-			     ipaddr_string(ndo, &ip->ip_src), sport,
-			     ipaddr_string(ndo, &ip->ip_dst), dport));
+			  ipaddr_string(ndo, &ip->ip_src), sport,
+			  ipaddr_string(ndo, &ip->ip_dst), dport));
 	}
+
+	ND_PRINT((ndo, "DCCP"));
 
 	if (ndo->ndo_qflag) {
 		ND_PRINT((ndo, " %d", len - hlen));
 		if (hlen > len) {
-			ND_PRINT((ndo, "dccp [bad hdr length %u - too long, > %u]",
-			    hlen, len));
+			ND_PRINT((ndo, " [bad hdr length %u - too long, > %u]",
+				  hlen, len));
 		}
 		return;
 	}
 
 	/* other variables in generic header */
 	if (ndo->ndo_vflag) {
-		ND_PRINT((ndo, "CCVal %d, CsCov %d, ", DCCPH_CCVAL(dh), DCCPH_CSCOV(dh)));
+		ND_PRINT((ndo, " (CCVal %d, CsCov %d, ", DCCPH_CCVAL(dh), DCCPH_CSCOV(dh)));
 	}
 
 	/* checksum calculation */
@@ -335,120 +344,135 @@ void dccp_print(netdissect_options *ndo, const u_char *bp, const u_char *data2,
 		ND_PRINT((ndo, "cksum 0x%04x ", dccp_sum));
 		if (IP_V(ip) == 4)
 			sum = dccp_cksum(ndo, ip, dh, len);
-#ifdef INET6
 		else if (IP_V(ip) == 6)
-			sum = dccp6_cksum(ip6, dh, len);
-#endif
+			sum = dccp6_cksum(ndo, ip6, dh, len);
 		if (sum != 0)
-			ND_PRINT((ndo, "(incorrect -> 0x%04x), ",in_cksum_shouldbe(dccp_sum, sum)));
+			ND_PRINT((ndo, "(incorrect -> 0x%04x)",in_cksum_shouldbe(dccp_sum, sum)));
 		else
-			ND_PRINT((ndo, "(correct), "));
+			ND_PRINT((ndo, "(correct)"));
 	}
 
-	switch (DCCPH_TYPE(dh)) {
+	if (ndo->ndo_vflag)
+		ND_PRINT((ndo, ")"));
+	ND_PRINT((ndo, " "));
+
+	dccph_type = DCCPH_TYPE(dh);
+	switch (dccph_type) {
 	case DCCP_PKT_REQUEST: {
-		struct dccp_hdr_request *dhr =
-			(struct dccp_hdr_request *)(bp + fixed_hdrlen);
+		const struct dccp_hdr_request *dhr =
+			(const struct dccp_hdr_request *)(bp + fixed_hdrlen);
 		fixed_hdrlen += 4;
 		if (len < fixed_hdrlen) {
-			ND_PRINT((ndo, "truncated-dccp request - %u bytes missing!",
-				     len - fixed_hdrlen));
+			ND_PRINT((ndo, "truncated-%s - %u bytes missing!",
+				  tok2str(dccp_pkt_type_str, "", dccph_type),
+				  len - fixed_hdrlen));
 			return;
 		}
 		ND_TCHECK(*dhr);
-		ND_PRINT((ndo, "request (service=%d) ",
-			     EXTRACT_32BITS(&dhr->dccph_req_service)));
+		ND_PRINT((ndo, "%s (service=%d) ",
+			  tok2str(dccp_pkt_type_str, "", dccph_type),
+			  EXTRACT_32BITS(&dhr->dccph_req_service)));
 		break;
 	}
 	case DCCP_PKT_RESPONSE: {
-		struct dccp_hdr_response *dhr =
-			(struct dccp_hdr_response *)(bp + fixed_hdrlen);
+		const struct dccp_hdr_response *dhr =
+			(const struct dccp_hdr_response *)(bp + fixed_hdrlen);
 		fixed_hdrlen += 12;
 		if (len < fixed_hdrlen) {
-			ND_PRINT((ndo, "truncated-dccp response - %u bytes missing!",
-				     len - fixed_hdrlen));
+			ND_PRINT((ndo, "truncated-%s - %u bytes missing!",
+				  tok2str(dccp_pkt_type_str, "", dccph_type),
+				  len - fixed_hdrlen));
 			return;
 		}
 		ND_TCHECK(*dhr);
-		ND_PRINT((ndo, "response (service=%d) ",
-			     EXTRACT_32BITS(&dhr->dccph_resp_service)));
+		ND_PRINT((ndo, "%s (service=%d) ",
+			  tok2str(dccp_pkt_type_str, "", dccph_type),
+			  EXTRACT_32BITS(&dhr->dccph_resp_service)));
 		break;
 	}
 	case DCCP_PKT_DATA:
-		ND_PRINT((ndo, "data "));
+		ND_PRINT((ndo, "%s ", tok2str(dccp_pkt_type_str, "", dccph_type)));
 		break;
 	case DCCP_PKT_ACK: {
 		fixed_hdrlen += 8;
 		if (len < fixed_hdrlen) {
-			ND_PRINT((ndo, "truncated-dccp ack - %u bytes missing!",
-				     len - fixed_hdrlen));
+			ND_PRINT((ndo, "truncated-%s - %u bytes missing!",
+				  tok2str(dccp_pkt_type_str, "", dccph_type),
+				  len - fixed_hdrlen));
 			return;
 		}
-		ND_PRINT((ndo, "ack "));
+		ND_PRINT((ndo, "%s ", tok2str(dccp_pkt_type_str, "", dccph_type)));
 		break;
 	}
 	case DCCP_PKT_DATAACK: {
 		fixed_hdrlen += 8;
 		if (len < fixed_hdrlen) {
-			ND_PRINT((ndo, "truncated-dccp dataack - %u bytes missing!",
-				     len - fixed_hdrlen));
+			ND_PRINT((ndo, "truncated-%s - %u bytes missing!",
+				  tok2str(dccp_pkt_type_str, "", dccph_type),
+				  len - fixed_hdrlen));
 			return;
 		}
-		ND_PRINT((ndo, "dataack "));
+		ND_PRINT((ndo, "%s ", tok2str(dccp_pkt_type_str, "", dccph_type)));
 		break;
 	}
 	case DCCP_PKT_CLOSEREQ:
 		fixed_hdrlen += 8;
 		if (len < fixed_hdrlen) {
-			ND_PRINT((ndo, "truncated-dccp closereq - %u bytes missing!",
-				     len - fixed_hdrlen));
+			ND_PRINT((ndo, "truncated-%s - %u bytes missing!",
+				  tok2str(dccp_pkt_type_str, "", dccph_type),
+				  len - fixed_hdrlen));
 			return;
 		}
-		ND_PRINT((ndo, "closereq "));
+		ND_PRINT((ndo, "%s ", tok2str(dccp_pkt_type_str, "", dccph_type)));
 		break;
 	case DCCP_PKT_CLOSE:
 		fixed_hdrlen += 8;
 		if (len < fixed_hdrlen) {
-			ND_PRINT((ndo, "truncated-dccp close - %u bytes missing!",
-				     len - fixed_hdrlen));
+			ND_PRINT((ndo, "truncated-%s - %u bytes missing!",
+				  tok2str(dccp_pkt_type_str, "", dccph_type),
+				  len - fixed_hdrlen));
 			return;
 		}
-		ND_PRINT((ndo, "close "));
+		ND_PRINT((ndo, "%s ", tok2str(dccp_pkt_type_str, "", dccph_type)));
 		break;
 	case DCCP_PKT_RESET: {
-		struct dccp_hdr_reset *dhr =
-			(struct dccp_hdr_reset *)(bp + fixed_hdrlen);
+		const struct dccp_hdr_reset *dhr =
+			(const struct dccp_hdr_reset *)(bp + fixed_hdrlen);
 		fixed_hdrlen += 12;
 		if (len < fixed_hdrlen) {
-			ND_PRINT((ndo, "truncated-dccp reset - %u bytes missing!",
-				     len - fixed_hdrlen));
+			ND_PRINT((ndo, "truncated-%s - %u bytes missing!",
+				  tok2str(dccp_pkt_type_str, "", dccph_type),
+				  len - fixed_hdrlen));
 			return;
 		}
 		ND_TCHECK(*dhr);
-		ND_PRINT((ndo, "reset (code=%s) ",
-			     dccp_reset_code(dhr->dccph_reset_code)));
+		ND_PRINT((ndo, "%s (code=%s) ",
+			  tok2str(dccp_pkt_type_str, "", dccph_type),
+			  dccp_reset_code(dhr->dccph_reset_code)));
 		break;
 	}
 	case DCCP_PKT_SYNC:
 		fixed_hdrlen += 8;
 		if (len < fixed_hdrlen) {
-			ND_PRINT((ndo, "truncated-dccp sync - %u bytes missing!",
-				     len - fixed_hdrlen));
+			ND_PRINT((ndo, "truncated-%s - %u bytes missing!",
+				  tok2str(dccp_pkt_type_str, "", dccph_type),
+				  len - fixed_hdrlen));
 			return;
 		}
-		ND_PRINT((ndo, "sync "));
+		ND_PRINT((ndo, "%s ", tok2str(dccp_pkt_type_str, "", dccph_type)));
 		break;
 	case DCCP_PKT_SYNCACK:
 		fixed_hdrlen += 8;
 		if (len < fixed_hdrlen) {
-			ND_PRINT((ndo, "truncated-dccp syncack - %u bytes missing!",
-				     len - fixed_hdrlen));
+			ND_PRINT((ndo, "truncated-%s - %u bytes missing!",
+				  tok2str(dccp_pkt_type_str, "", dccph_type),
+				  len - fixed_hdrlen));
 			return;
 		}
-		ND_PRINT((ndo, "syncack "));
+		ND_PRINT((ndo, "%s ", tok2str(dccp_pkt_type_str, "", dccph_type)));
 		break;
 	default:
-		ND_PRINT((ndo, "invalid "));
+		ND_PRINT((ndo, "%s ", tok2str(dccp_pkt_type_str, "unknown-type-%u", dccph_type)));
 		break;
 	}
 
@@ -463,7 +487,6 @@ void dccp_print(netdissect_options *ndo, const u_char *bp, const u_char *data2,
 
 	/* process options */
 	if (hlen > fixed_hdrlen){
-		const u_char *cp;
 		u_int optlen;
 		cp = bp + fixed_hdrlen;
 		ND_PRINT((ndo, " <"));
@@ -504,7 +527,7 @@ static const struct tok dccp_option_values[] = {
 	{ 42, "timestamp_echo" },
 	{ 43, "elapsed_time" },
 	{ 44, "data_checksum" },
-        { 0, NULL }
+	{ 0, NULL }
 };
 
 static int dccp_print_option(netdissect_options *ndo, const u_char *option, u_int hlen)
@@ -521,7 +544,7 @@ static int dccp_print_option(netdissect_options *ndo, const u_char *option, u_in
 				ND_PRINT((ndo, "CCID option %u optlen too short", *option));
 			else
 				ND_PRINT((ndo, "%s optlen too short",
-				    tok2str(dccp_option_values, "Option %u", *option)));
+					  tok2str(dccp_option_values, "Option %u", *option)));
 			return 0;
 		}
 	} else
@@ -530,10 +553,10 @@ static int dccp_print_option(netdissect_options *ndo, const u_char *option, u_in
 	if (hlen < optlen) {
 		if (*option >= 128)
 			ND_PRINT((ndo, "CCID option %u optlen goes past header length",
-			    *option));
+				  *option));
 		else
 			ND_PRINT((ndo, "%s optlen goes past header length",
-			    tok2str(dccp_option_values, "Option %u", *option)));
+				  tok2str(dccp_option_values, "Option %u", *option)));
 		return 0;
 	}
 	ND_TCHECK2(*option, optlen);
