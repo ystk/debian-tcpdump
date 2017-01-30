@@ -1,0 +1,29 @@
+Disable tests that require newer libpcap versions.
+
+--- a/tests/TESTLIST
++++ b/tests/TESTLIST
+@@ -300,8 +300,8 @@
+ 
+ # Geneve tests
+ geneve-v	geneve.pcap		geneve-vv.out	-t -vv
+-geneve-vni	geneve.pcap		geneve-vni.out	-t geneve 0xb
+-geneve-tcp	geneve.pcap		geneve-tcp.out	-t "geneve && tcp"
++#geneve-vni	geneve.pcap		geneve-vni.out	-t geneve 0xb
++#geneve-tcp	geneve.pcap		geneve-tcp.out	-t "geneve && tcp"
+ 
+ # DHCP tests
+ dhcp-rfc3004	dhcp-rfc3004.pcap	dhcp-rfc3004-v.out	-t -v
+@@ -355,11 +355,11 @@
+ 
+ # pcap invalid versions (first: version = 1.4 ; second: version = 2.5)
+ pcap-invalid-version-1 pcap-invalid-version-1.pcap pcap-invalid-version-1.out -t
+-pcap-invalid-version-2 pcap-invalid-version-2.pcap pcap-invalid-version-2.out -t
++#pcap-invalid-version-2 pcap-invalid-version-2.pcap pcap-invalid-version-2.out -t
+ 
+ # pcap-ng invalid version (first: version = 0.1 ; second: version = 1.1)
+ pcap-ng-invalid-vers-1 pcap-ng-invalid-vers-1.pcap pcap-ng-invalid-vers-1.out -t
+-pcap-ng-invalid-vers-2 pcap-ng-invalid-vers-2.pcap pcap-ng-invalid-vers-2.out -t
++#pcap-ng-invalid-vers-2 pcap-ng-invalid-vers-2.pcap pcap-ng-invalid-vers-2.out -t
+ 
+ # NSH over VxLAN-GPE
+ nsh-over-vxlan-gpe     nsh-over-vxlan-gpe.pcap nsh-over-vxlan-gpe.out     -t

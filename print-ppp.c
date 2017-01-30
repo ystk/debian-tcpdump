@@ -22,6 +22,8 @@
  * complete PPP support.
  */
 
+/* \summary: Point to Point Protocol (PPP) printer */
+
 /*
  * TODO:
  * o resolve XXX as much as possible
@@ -29,12 +31,11 @@
  * o BAP support
  */
 
-#define NETDISSECT_REWORKED
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
-#include <tcpdump-stdinc.h>
+#include <netdissect-stdinc.h>
 
 #ifdef __bsdi__
 #include <net/slcompress.h>
@@ -43,7 +44,7 @@
 
 #include <stdlib.h>
 
-#include "interface.h"
+#include "netdissect.h"
 #include "extract.h"
 #include "addrtoname.h"
 #include "ppp.h"
@@ -805,8 +806,8 @@ static const struct tok ppp_ml_flag_values[] = {
 
 static void
 handle_mlppp(netdissect_options *ndo,
-             const u_char *p, int length) {
-
+             const u_char *p, int length)
+{
     if (!ndo->ndo_eflag)
         ND_PRINT((ndo, "MLPPP, "));
 
@@ -943,6 +944,9 @@ handle_pap(netdissect_options *ndo,
 
 	switch (code) {
 	case PAP_AREQ:
+		/* A valid Authenticate-Request is 6 or more octets long. */
+		if (len < 6)
+			goto trunc;
 		if (length - (p - p0) < 1)
 			return;
 		ND_TCHECK(*p);
@@ -971,6 +975,13 @@ handle_pap(netdissect_options *ndo,
 		break;
 	case PAP_AACK:
 	case PAP_ANAK:
+		/* Although some implementations ignore truncation at
+		 * this point and at least one generates a truncated
+		 * packet, RFC 1334 section 2.2.2 clearly states that
+		 * both AACK and ANAK are at least 5 bytes long.
+		 */
+		if (len < 5)
+			goto trunc;
 		if (length - (p - p0) < 1)
 			return;
 		ND_TCHECK(*p);
@@ -1351,14 +1362,15 @@ static void
 ppp_hdlc(netdissect_options *ndo,
          const u_char *p, int length)
 {
-	u_char *b, *s, *t, c;
+	u_char *b, *t, c;
+	const u_char *s;
 	int i, proto;
 	const void *se;
 
         if (length <= 0)
                 return;
 
-	b = (uint8_t *)malloc(length);
+	b = (u_char *)malloc(length);
 	if (b == NULL)
 		return;
 
@@ -1367,14 +1379,13 @@ ppp_hdlc(netdissect_options *ndo,
 	 * Do this so that we dont overwrite the original packet
 	 * contents.
 	 */
-	for (s = (u_char *)p, t = b, i = length; i > 0; i--) {
+	for (s = p, t = b, i = length; i > 0 && ND_TTEST(*s); i--) {
 		c = *s++;
 		if (c == 0x7d) {
-			if (i > 1) {
-				i--;
-				c = *s++ ^ 0x20;
-			} else
-				continue;
+			if (i <= 1 || !ND_TTEST(*s))
+				break;
+			i--;
+			c = *s++ ^ 0x20;
 		}
 		*t++ = c;
 	}
@@ -1392,11 +1403,9 @@ ppp_hdlc(netdissect_options *ndo,
         case PPP_IP:
 		ip_print(ndo, b + 1, length - 1);
 		goto cleanup;
-#ifdef INET6
         case PPP_IPV6:
 		ip6_print(ndo, b + 1, length - 1);
 		goto cleanup;
-#endif
         default: /* no luck - try next guess */
 		break;
         }
@@ -1466,12 +1475,10 @@ handle_ppp(netdissect_options *ndo,
 	case PPP_IP:
 		ip_print(ndo, p, length);
 		break;
-#ifdef INET6
 	case ETHERTYPE_IPV6:	/*XXX*/
 	case PPP_IPV6:
 		ip6_print(ndo, p, length);
 		break;
-#endif
 	case ETHERTYPE_IPX:	/*XXX*/
 	case PPP_IPX:
 		ipx_print(ndo, p, length);
@@ -1674,6 +1681,11 @@ ppp_hdlc_if_print(netdissect_options *ndo,
 		return (chdlc_if_print(ndo, h, p));
 
 	default:
+		if (caplen < 4) {
+			ND_PRINT((ndo, "[|ppp]"));
+			return (caplen);
+		}
+
 		if (ndo->ndo_eflag)
 			ND_PRINT((ndo, "%02x %02x %d ", p[0], p[1], length));
 		p += 2;
@@ -1781,11 +1793,9 @@ ppp_bsdos_if_print(netdissect_options *ndo _U_,
 			case PPP_IP:
 				ip_print(ndo, p, length);
 				break;
-#ifdef INET6
 			case PPP_IPV6:
 				ip6_print(ndo, p, length);
 				break;
-#endif
 			case PPP_MPLS_UCAST:
 			case PPP_MPLS_MCAST:
 				mpls_print(ndo, p, length);
@@ -1800,11 +1810,9 @@ ppp_bsdos_if_print(netdissect_options *ndo _U_,
 			case PPP_IP:
 				ip_print(ndo, p, length);
 				break;
-#ifdef INET6
 			case PPP_IPV6:
 				ip6_print(ndo, p, length);
 				break;
-#endif
 			case PPP_MPLS_UCAST:
 			case PPP_MPLS_MCAST:
 				mpls_print(ndo, p, length);
@@ -1832,11 +1840,9 @@ ppp_bsdos_if_print(netdissect_options *ndo _U_,
 	case PPP_IP:
 		ip_print(p, length);
 		break;
-#ifdef INET6
 	case PPP_IPV6:
 		ip6_print(ndo, p, length);
 		break;
-#endif
 	case PPP_MPLS_UCAST:
 	case PPP_MPLS_MCAST:
 		mpls_print(ndo, p, length);

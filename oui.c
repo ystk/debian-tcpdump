@@ -13,13 +13,12 @@
  * Original code by Hannes Gredler (hannes@juniper.net)
  */
 
-#define NETDISSECT_REWORKED
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
-#include <tcpdump-stdinc.h>
-#include "interface.h"
+#include <netdissect-stdinc.h>
+#include "netdissect.h"
 #include "oui.h"
 
 /* FIXME complete OUI list using a script */
@@ -27,6 +26,7 @@
 const struct tok oui_values[] = {
     { OUI_ENCAP_ETHER, "Ethernet" },
     { OUI_CISCO, "Cisco" },
+    { OUI_IANA, "IANA" },
     { OUI_NORTEL, "Nortel Networks SONMP" },
     { OUI_CISCO_90, "Cisco bridged" },
     { OUI_RFC2684, "Ethernet bridged" },
@@ -39,6 +39,15 @@ const struct tok oui_values[] = {
     { OUI_IEEE_8023_PRIVATE, "IEEE 802.3 Private"},
     { OUI_TIA, "ANSI/TIA"},
     { OUI_DCBX, "DCBX"},
+    { OUI_NICIRA, "Nicira Networks" },
+    { OUI_BSN, "Big Switch Networks" },
+    { OUI_VELLO, "Vello Systems" },
+    { OUI_HP2, "HP" },
+    { OUI_HPLABS, "HP-Labs" },
+    { OUI_INFOBLOX, "Infoblox Inc" },
+    { OUI_ONLAB, "Open Networking Lab" },
+    { OUI_FREESCALE, "Freescale" },
+    { OUI_NETRONOME, "Netronome" },
     { 0, NULL }
 };
 

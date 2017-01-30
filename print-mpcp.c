@@ -12,19 +12,18 @@
  * LIMITATION, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
  * FOR A PARTICULAR PURPOSE.
  *
- * support for the IEEE MPCP protocol as per 802.3ah
- *
  * Original code by Hannes Gredler (hannes@juniper.net)
  */
 
-#define NETDISSECT_REWORKED
+/* \summary: IEEE 802.3ah Multi-Point Control Protocol (MPCP) printer */
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
-#include <tcpdump-stdinc.h>
+#include <netdissect-stdinc.h>
 
-#include "interface.h"
+#include "netdissect.h"
 #include "extract.h"
 
 #define MPCP_TIMESTAMP_LEN        4
@@ -122,8 +121,8 @@ static const struct tok mpcp_reg_ack_flag_values[] = {
 };
 
 void
-mpcp_print(netdissect_options *ndo, register const u_char *pptr, register u_int length) {
-
+mpcp_print(netdissect_options *ndo, register const u_char *pptr, register u_int length)
+{
     union {
         const struct mpcp_common_header_t *common_header;
         const struct mpcp_grant_t *grant;
