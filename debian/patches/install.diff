@@ -3,7 +3,7 @@ a versioned binary.
 
 --- a/Makefile.in
 +++ b/Makefile.in
-@@ -406,14 +406,13 @@
+@@ -413,14 +413,13 @@
  	[ -d $(DESTDIR)$(sbindir) ] || \
  	    (mkdir -p $(DESTDIR)$(sbindir); chmod 755 $(DESTDIR)$(sbindir))
  	$(INSTALL_PROGRAM) $(PROG) $(DESTDIR)$(sbindir)/$(PROG)

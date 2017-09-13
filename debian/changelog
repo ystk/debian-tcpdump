@@ -1,3 +1,10 @@
+tcpdump (4.9.2-1~deb8u1) jessie-security; urgency=high
+
+  * New upstream release, fixing 90 new CVEs. See the upstream changelog
+    for the full list (closes: #867718, #873804, #873805, #873806).
+
+ -- Romain Francoise <rfrancoise@debian.org>  Sat, 09 Sep 2017 21:39:47 +0200
+
 tcpdump (4.9.0-1~deb8u1) jessie-security; urgency=high
 
   * Backport to jessie:
