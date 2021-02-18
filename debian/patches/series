@@ -2,3 +2,4 @@ install.diff
 man-section.diff
 platform-quirks.diff
 disable-tests.patch
+CVE-2020-8037.patch

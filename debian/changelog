@@ -1,3 +1,12 @@
+tcpdump (4.9.3-1~deb8u2) jessie-security; urgency=medium
+
+  * Non-maintainer upload by the ELTS team.
+  * Cherry-pick commit 32027e1993 from the upstream tcpdump-4.9
+    branch to fix untrusted input issue in the PPP printer.
+    (Fixes: CVE-2020-8037) (Closes: #973877)
+
+ -- Utkarsh Gupta <utkarsh@debian.org>  Sat, 07 Nov 2020 22:13:58 +0530
+
 tcpdump (4.9.3-1~deb8u1) jessie-security; urgency=high
 
   * Non-maintainer upload by the LTS team.
